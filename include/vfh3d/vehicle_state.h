@@ -7,10 +7,10 @@
 
 namespace vfh3d {
 
-class Vehicle 
+class VehicleState 
 {
 public:
-  Vehicle(
+  VehicleState(
     const geometry_msgs::Pose& init_pose, const tf::Vector3& size) :
     size_(size)
   {
@@ -21,7 +21,7 @@ public:
     max_ = pose_.getOrigin() + size_half;
   }
 
-  ~Vehicle() {}
+  ~VehicleState() {}
 
   void poseCb(const geometry_msgs::PoseConstPtr& pose) {
     last_pose_ = pose_;
