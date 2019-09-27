@@ -10,15 +10,10 @@ namespace vfh3d {
 class VehicleState 
 {
 public:
-  VehicleState(
-    const geometry_msgs::Pose& init_pose, const tf::Vector3& size) :
+  VehicleState(const tf::Vector3& size) :
     size_(size)
   {
-    tf::poseMsgToTF(init_pose, pose_);
     radius_ = size_[size_.maxAxis()];
-    auto size_half = size_ * 0.5;
-    min_ = pose_.getOrigin() - size_half;
-    max_ = pose_.getOrigin() + size_half;
   }
 
   ~VehicleState() {}

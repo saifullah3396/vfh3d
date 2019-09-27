@@ -1,5 +1,4 @@
 #include <vfh3d/utils.h>
-#include ""
 
 namespace vfh3d {
 namespace utils {
