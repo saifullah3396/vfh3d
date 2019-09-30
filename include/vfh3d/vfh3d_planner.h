@@ -37,6 +37,7 @@ private:
 
   // publishers
   ros::Publisher histogram_pub_, planned_target_pub_;
+  ros::Publisher bbx_cells_pub_;
 
   // subscribers
   ros::Subscriber vehicle_pose_sub_, octomap_sub_, goal_sub_;

@@ -1,4 +1,5 @@
 #include <vfh3d/vfh3d_planner.h>
+#include <visualization_msgs/MarkerArray.h>
 
 namespace vfh3d {
 
@@ -60,6 +61,7 @@ VFH3DPlanner::VFH3DPlanner() {
   planned_target_pub_ = 
     nh_.advertise<geometry_msgs::Pose>(
       "planned_target", 10);
+  bbx_cells_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("bbx_cells", 10);
 }
 
 void VFH3DPlanner::poseCb(const geometry_msgs::PoseConstPtr& pose_msg) {
@@ -80,6 +82,7 @@ void VFH3DPlanner::octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg) {
 
 void VFH3DPlanner::update() {
   polar_histogram_->update(max_plan_range_, hist_resolution_);
+  bbx_cells_pub_.publish(polar_histogram_->getBbxMarkers());
 }
 
 }
