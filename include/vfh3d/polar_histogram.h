@@ -1,8 +1,6 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
 #include <octomap/octomap.h>
 #include <vfh3d/vehicle_state.h>
 #include <vfh3d/utils.h>
