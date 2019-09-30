@@ -7,7 +7,7 @@ VFH3DPlanner::VFH3DPlanner() {
   auto p_nh = ros::NodeHandle("~");
   p_nh.getParam("map_resolution", map_resolution_);
   p_nh.getParam("max_plan_range", max_plan_range_);
-  p_nh.getParam("alpha", hist_resolution_);
+  p_nh.getParam("hist_resolution", hist_resolution_);
 
   std::string robot_description;
   p_nh.getParam("robot_description", robot_description);

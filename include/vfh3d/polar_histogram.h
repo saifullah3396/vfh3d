@@ -22,7 +22,7 @@ class PolarHistogram {
   {}
   ~PolarHistogram() {}
 
-  void update(const double& max_plan_range, const double& alpha) {
+  void update(const double& max_plan_range, const double& hist_resolution) {
     auto v = vehicle_state_.lock();
     auto range = octomath::Vector3(max_plan_range, max_plan_range, max_plan_range);
     auto min_hist_range = v->min() - range;

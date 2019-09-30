@@ -41,7 +41,7 @@ private:
   ros::Subscriber vehicle_pose_sub_, octomap_sub_, goal_sub_;
 
   // params
-  double alpha_;
+  double hist_resolution_;
   double max_plan_range_;
   double map_resolution_;
 
