@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   octomap_msgs
   octomap_ros
   roscpp
+  urdf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -133,7 +134,12 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node src/vfh3d_node.cpp)
+add_executable(${PROJECT_NAME}_node 
+  src/vfh3d_node.cpp 
+  src/vfh3d_planner.cpp
+  src/polar_histogram.cpp
+  src/utils.cpp)
+add_executable(octomap_bbx_iter_test_node src/octomap_bbx_iter_test.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -147,6 +153,10 @@ add_executable(${PROJECT_NAME}_node src/vfh3d_node.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(octomap_bbx_iter_test_node
   ${catkin_LIBRARIES}
 )
 
