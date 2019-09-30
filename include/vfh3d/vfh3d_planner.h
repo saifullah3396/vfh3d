@@ -26,7 +26,7 @@ public:
   void update();
 
   // callbacks
-  void poseCb(const geometry_msgs::PoseConstPtr& pose_msg);
+  void poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg);
   void goalCb(const geometry_msgs::PoseConstPtr& goal_msg);
   void octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg);
 

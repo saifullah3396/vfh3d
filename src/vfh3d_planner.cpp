@@ -6,6 +6,9 @@ namespace vfh3d {
 VFH3DPlanner::VFH3DPlanner() {
   // get params
   auto p_nh = ros::NodeHandle("~");
+  std::string octomap_topic, pose_topic;
+  p_nh.getParam("octomap_topic", octomap_topic);
+  p_nh.getParam("pose_topic", pose_topic);
   p_nh.getParam("map_resolution", map_resolution_);
   p_nh.getParam("max_plan_range", max_plan_range_);
   p_nh.getParam("hist_resolution", hist_resolution_);
@@ -18,15 +21,15 @@ VFH3DPlanner::VFH3DPlanner() {
   p_nh.getParam("turning_radius_r", turning_radius_r);
 
   std::string robot_description;
-  p_nh.getParam("robot_description", robot_description);
+  nh_.getParam("robot_description", robot_description);
   urdf::Model model;
-  if (model.initString(robot_description)) {
+  if (!model.initString(robot_description)) {
     ROS_FATAL("Failed to parse vehicle urdf.");
     return;
   }
   auto collision_box = 
     std::static_pointer_cast<urdf::Box>(
-      model.getLink("base_link")->collision->geometry)->dim;
+      model.getLink("base_link_inertia")->collision->geometry)->dim;
   auto vehicle_bbox = 
     tf::Vector3(collision_box.x, collision_box.y, collision_box.z);
   oc_tree_ = 
@@ -45,14 +48,14 @@ VFH3DPlanner::VFH3DPlanner() {
 
   // Initialize subscribers
   vehicle_pose_sub_ = 
-    nh_.subscribe<geometry_msgs::Pose>(
-      "pose_in", 10, &VFH3DPlanner::poseCb, this);
+    nh_.subscribe<geometry_msgs::PoseStamped>(
+      pose_topic, 10, &VFH3DPlanner::poseCb, this);
   goal_sub_ = 
     nh_.subscribe<geometry_msgs::Pose>(
       "goal_in", 10, &VFH3DPlanner::goalCb, this);
   octomap_sub_ = 
     nh_.subscribe<octomap_msgs::Octomap>(
-      "octomap_in", 10, &VFH3DPlanner::octomapCb, this);
+      octomap_topic, 10, &VFH3DPlanner::octomapCb, this);
 
   // Initialize publishers
   histogram_pub_ = 
@@ -64,7 +67,7 @@ VFH3DPlanner::VFH3DPlanner() {
   bbx_cells_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("bbx_cells", 10);
 }
 
-void VFH3DPlanner::poseCb(const geometry_msgs::PoseConstPtr& pose_msg) {
+void VFH3DPlanner::poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg) {
   vehicle_state_->poseCb(pose_msg);
 }
 
