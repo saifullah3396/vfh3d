@@ -20,7 +20,8 @@ VFH3DPlanner::VFH3DPlanner() {
     std::static_pointer_cast<urdf::Box>(model.getLink("base_link")->collision->geometry)->dim;
   auto vehicle_bbox = tf::Vector3(collision_box.x, collision_box.y, collision_box.z);
   oc_tree_ = std::shared_ptr<OcTree>(new OcTree(map_resolution_));
-  vehicle_state_ = std::unique_ptr<VehicleState>(new VehicleState(vehicle_bbox));
+  vehicle_state_ = std::shared_ptr<VehicleState>(new VehicleState(vehicle_bbox));
+  polar_histogram_ = std::unique_ptr<PolarHistogram>(new PolarHistogram(oc_tree_, vehicle_state_));
 
   // Initialize subscribers
   vehicle_pose_sub_ = nh_.subscribe<geometry_msgs::Pose>("pose_in", 10, &VFH3DPlanner::poseCb, this);
@@ -49,7 +50,7 @@ void VFH3DPlanner::octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg) {
 }
 
 void VFH3DPlanner::update() {
-
+  polar_histogram_->update(max_plan_range_, hist_resolution_);
 }
 
 }

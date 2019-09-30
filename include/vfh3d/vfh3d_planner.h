@@ -11,6 +11,7 @@
 #include <urdf/model.h>
 #include <vfh3d/utils.h>
 #include <vfh3d/vehicle_state.h>
+#include <vfh3d/polar_histogram.h>
 
 using namespace octomap;
 
@@ -47,7 +48,8 @@ private:
 
   // planning
   std::shared_ptr<OcTree> oc_tree_;
-  std::unique_ptr<VehicleState> vehicle_state_;
+  std::shared_ptr<VehicleState> vehicle_state_;
+  std::unique_ptr<PolarHistogram> polar_histogram_;
 };
 
 }
