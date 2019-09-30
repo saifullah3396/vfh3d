@@ -45,7 +45,7 @@ private:
   double hist_resolution_;
   double max_plan_range_;
   double map_resolution_;
-
+  
   // planning
   std::shared_ptr<OcTree> oc_tree_;
   std::shared_ptr<VehicleState> vehicle_state_;
