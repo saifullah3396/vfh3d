@@ -25,9 +25,9 @@ public:
 
   ~VehicleState() {}
 
-  void poseCb(const geometry_msgs::PoseConstPtr& pose) {
+  void poseCb(const geometry_msgs::PoseStampedConstPtr& pose) {
     last_pose_ = pose_;
-    tf::poseMsgToTF(*pose, pose_);
+    tf::poseMsgToTF((*pose).pose, pose_);
     auto size_half = size_ * 0.5;
     min_ = pose_.getOrigin() - size_half;
     max_ = pose_.getOrigin() + size_half;
