@@ -44,6 +44,12 @@ void VFH3DPlanner::octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg) {
   auto new_tree = static_cast<OcTree*>(octomap_msgs::binaryMsgToMap(*octomap_msg));
   oc_tree_->swapContent(*new_tree);
   delete new_tree;
+
+  update();
+}
+
+void VFH3DPlanner::update() {
+
 }
 
 }

@@ -22,6 +22,8 @@ public:
   VFH3DPlanner();
   ~VFH3DPlanner() {}
 
+  void update();
+
   // callbacks
   void poseCb(const geometry_msgs::PoseConstPtr& pose_msg);
   void goalCb(const geometry_msgs::PoseConstPtr& goal_msg);
