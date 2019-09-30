@@ -10,9 +10,9 @@
 
   <!-- Start the mavros navigation node -->
   <node name="vfh3d_node" pkg="vfh3d" type="vfh3d_node" output="screen" launch-prefix="$(arg launch_prefix)">
-    <remap from="octomap_topic" to="$(arg octomap_topic)" />
-    <remap from="hist_resolution" to="$(arg hist_resolution)" />
-    <remap from="max_plan_range" to="$(arg max_plan_range)" />
-    <remap from="map_resolution" to="$(arg map_resolution)" />
+    <param name="octomap_topic" value="$(arg octomap_topic)" />
+    <param name="hist_resolution" value="$(arg hist_resolution)" />
+    <param name="max_plan_range" value="$(arg max_plan_range)" />
+    <param name="map_resolution" value="$(arg map_resolution)" />
   </node>
 </launch>
