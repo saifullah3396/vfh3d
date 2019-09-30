@@ -1,0 +1,14 @@
+<launch>
+  <arg name="octomap_topic" default="/camera/depth/points"/>
+  <arg name="hist_resolution" default="0.05" />
+  <arg name="max_plan_range" default="1.0" />
+  <arg name="map_resolution" default="0.15" />
+
+  <!-- Start the mavros navigation node -->
+  <node name="vfh3d_node" pkg="vfh3d" type="vfh3d_node" output="screen" launch-prefix="$(arg launch_prefix)">
+    <remap from="octomap_topic" to="$(arg octomap_topic)" />
+    <remap from="hist_resolution" to="$(arg hist_resolution)" />
+    <remap from="max_plan_range" to="$(arg max_plan_range)" />
+    <remap from="map_resolution" to="$(arg map_resolution)" />
+  </node>
+</launch>
