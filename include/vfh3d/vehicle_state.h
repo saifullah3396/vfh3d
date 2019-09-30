@@ -10,8 +10,15 @@ namespace vfh3d {
 class VehicleState 
 {
 public:
-  VehicleState(const tf::Vector3& size) :
-    size_(size)
+  VehicleState(
+    const tf::Vector3& size,
+    const double& safety_radius,
+    const double& turning_radius_l = 0.2,
+    const double& turning_radius_r = 0.2) :
+    size_(size),
+    safety_radius_(safety_radius),
+    turning_radius_l_(turning_radius_l),
+    turning_radius_r_(turning_radius_r)
   {
     radius_ = size_[size_.maxAxis()];
   }
@@ -41,11 +48,11 @@ private:
   tf::Pose pose_; // vehicle pose
   tf::Pose last_pose_; // last vehicle pose
   tf::Vector3 size_; // vehicle size in 3d
-  tf::Vector3 min_; // vehicle minimum boundary in 3d
-  tf::Vector3 max_; // vehicle maximum boundary in 3d
+  tf::Vector3 min_ = {tf::Vector3(0.0, 0.0, 0.0)}; // vehicle minimum boundary in 3d
+  tf::Vector3 max_ = {tf::Vector3(0.0, 0.0, 0.0)}; // vehicle maximum boundary in 3d
   double radius_; // vehicle radius
-  double turning_radius_l_ = {0.2}; // maximum left turn radius
-  double turning_radius_r_ = {0.2}; // maximum right turn radius
+  double turning_radius_l_; // maximum left turn radius
+  double turning_radius_r_; // maximum right turn radius
   double safety_radius_; // safety radius
 };
 
