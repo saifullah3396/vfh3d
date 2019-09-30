@@ -1,4 +1,8 @@
 <launch>
+  <arg name="debug" default="false" />
+  <arg unless="$(arg debug)" name="launch_prefix" value="" />
+  <arg     if="$(arg debug)" name="launch_prefix"
+	   value="/usr/local/bin/gdb --directory=/usr/local/bin --ex run --args" />
   <arg name="octomap_topic" default="/camera/depth/points"/>
   <arg name="hist_resolution" default="0.05" />
   <arg name="max_plan_range" default="1.0" />
