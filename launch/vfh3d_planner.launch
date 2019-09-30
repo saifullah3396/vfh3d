@@ -3,16 +3,26 @@
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
   <arg     if="$(arg debug)" name="launch_prefix"
 	   value="/usr/local/bin/gdb --directory=/usr/local/bin --ex run --args" />
-  <arg name="octomap_topic" default="/camera/depth/points"/>
+  <arg name="octomap_topic" default="/octomap_binary"/>
   <arg name="hist_resolution" default="0.05" />
   <arg name="max_plan_range" default="1.0" />
   <arg name="map_resolution" default="0.15" />
+
+  <arg name="visual_material" default="DarkGrey" />
+  <arg name="rotors_description_dir" default="$(find px4)/Tools/sitl_gazebo/models/rotors_description" />
+  <param name="robot_description" 
+    command="$(find xacro)/xacro 
+      $(arg rotors_description_dir)/urdf/iris.xacro 
+      rotors_description_dir:=$(arg rotors_description_dir) 
+      visual_material:=$(arg visual_material)
+      --inorder" 
+  />
 
   <!-- Start the mavros navigation node -->
   <node name="vfh3d_node" pkg="vfh3d" type="vfh3d_node" output="screen" launch-prefix="$(arg launch_prefix)">
     <param name="octomap_topic" value="$(arg octomap_topic)" />
     <param name="hist_resolution" value="$(arg hist_resolution)" />
     <param name="max_plan_range" value="$(arg max_plan_range)" />
-    <param name="map_resolution" value="$(arg map_resolution)" />
+    <param name="pose_topic" value="/mavros/local_position/pose" />
   </node>
 </launch>
