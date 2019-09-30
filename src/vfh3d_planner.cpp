@@ -7,7 +7,7 @@ VFH3DPlanner::VFH3DPlanner() {
   auto p_nh = ros::NodeHandle("~");
   p_nh.getParam("map_resolution", map_resolution_);
   p_nh.getParam("max_plan_range", max_plan_range_);
-  p_nh.getParam("alpha", alpha_);
+  p_nh.getParam("alpha", hist_resolution_);
 
   std::string robot_description;
   p_nh.getParam("robot_description", robot_description);
@@ -19,7 +19,7 @@ VFH3DPlanner::VFH3DPlanner() {
   auto collision_box = 
     std::static_pointer_cast<urdf::Box>(model.getLink("base_link")->collision->geometry)->dim;
   auto vehicle_bbox = tf::Vector3(collision_box.x, collision_box.y, collision_box.z);
-  oc_tree_ = std::unique_ptr<OcTree>(new OcTree(map_resolution_));
+  oc_tree_ = std::shared_ptr<OcTree>(new OcTree(map_resolution_));
   vehicle_state_ = std::unique_ptr<VehicleState>(new VehicleState(vehicle_bbox));
 
   // Initialize subscribers

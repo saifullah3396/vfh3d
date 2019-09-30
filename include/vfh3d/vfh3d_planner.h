@@ -46,7 +46,7 @@ private:
   double map_resolution_;
 
   // planning
-  std::unique_ptr<OcTree> oc_tree_;
+  std::shared_ptr<OcTree> oc_tree_;
   std::unique_ptr<VehicleState> vehicle_state_;
 };
 
