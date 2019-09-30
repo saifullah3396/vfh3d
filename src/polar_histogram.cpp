@@ -35,15 +35,17 @@ void PolarHistogram::update(const double& max_plan_range, const double& hist_res
   color.a = 1;
   color.r = 1;
   cell_marker_.color = color;
-  cell_marker_.id = marker_id_++;
   // iterate through the nodes in the box
   auto begin = oc_tree_->begin_leafs_bbx(min_hist_range, max_hist_range);
-  for(auto iter = begin; iter!= oc_tree_->end_leafs_bbx(); ++iter)
+  auto end = oc_tree_->end_leafs_bbx();
+  marker_id_ = 0;        
+  for(auto iter = begin; iter!= end; ++iter)
   {
     auto coord = iter.getCoordinate();
     cell_marker_.pose.position.x = coord.x();
     cell_marker_.pose.position.y = coord.y();
     cell_marker_.pose.position.z = coord.z();
+    cell_marker_.id = marker_id_++;
     bbx_markers_.markers.push_back(cell_marker_);
   }
 }
