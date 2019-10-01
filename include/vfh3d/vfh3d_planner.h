@@ -38,12 +38,13 @@ private:
   // publishers
   ros::Publisher histogram_pub_, planned_target_pub_;
   ros::Publisher bbx_cells_pub_;
+  ros::Publisher hist_grid_pub_;
 
   // subscribers
   ros::Subscriber vehicle_pose_sub_, octomap_sub_, goal_sub_;
+  bool pose_recieved_ = {false};
 
   // params
-  double hist_resolution_;
   double max_plan_range_;
   double map_resolution_;
   

@@ -7,11 +7,12 @@ VFH3DPlanner::VFH3DPlanner() {
   // get params
   auto p_nh = ros::NodeHandle("~");
   std::string octomap_topic, pose_topic;
+  double hist_resolution;
   p_nh.getParam("octomap_topic", octomap_topic);
   p_nh.getParam("pose_topic", pose_topic);
   p_nh.getParam("map_resolution", map_resolution_);
   p_nh.getParam("max_plan_range", max_plan_range_);
-  p_nh.getParam("hist_resolution", hist_resolution_);
+  p_nh.getParam("hist_resolution", hist_resolution);
 
   double vehicle_safety_radius;
   double turning_radius_l;
@@ -44,7 +45,7 @@ VFH3DPlanner::VFH3DPlanner() {
   polar_histogram_ = 
     std::unique_ptr<PolarHistogram>(
         new PolarHistogram(
-          oc_tree_, vehicle_state_));
+          oc_tree_, vehicle_state_, hist_resolution));
 
   // Initialize subscribers
   vehicle_pose_sub_ = 
@@ -65,10 +66,12 @@ VFH3DPlanner::VFH3DPlanner() {
     nh_.advertise<geometry_msgs::Pose>(
       "planned_target", 10);
   bbx_cells_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("bbx_cells", 10);
+  hist_grid_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("hist_grid", 10);
 }
 
 void VFH3DPlanner::poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg) {
   vehicle_state_->poseCb(pose_msg);
+  pose_recieved_ = true;
 }
 
 void VFH3DPlanner::goalCb(const geometry_msgs::PoseConstPtr& goal_msg) {
@@ -76,16 +79,20 @@ void VFH3DPlanner::goalCb(const geometry_msgs::PoseConstPtr& goal_msg) {
 }
 
 void VFH3DPlanner::octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg) {
-  auto new_tree = static_cast<OcTree*>(octomap_msgs::binaryMsgToMap(*octomap_msg));
-  oc_tree_->swapContent(*new_tree);
-  delete new_tree;
+  if (pose_recieved_) {
+    auto new_tree = static_cast<OcTree*>(octomap_msgs::binaryMsgToMap(*octomap_msg));
+    oc_tree_->swapContent(*new_tree);
+    delete new_tree;
 
-  update();
+    update();
+    ros::shutdown();
+  }
 }
 
 void VFH3DPlanner::update() {
-  polar_histogram_->update(max_plan_range_, hist_resolution_);
+  polar_histogram_->update(max_plan_range_);
   bbx_cells_pub_.publish(polar_histogram_->getBbxMarkers());
+  hist_grid_pub_.publish(polar_histogram_->getDataMarkers());
 }
 
 }
