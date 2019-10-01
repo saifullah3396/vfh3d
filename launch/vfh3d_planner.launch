@@ -4,7 +4,7 @@
   <arg     if="$(arg debug)" name="launch_prefix"
 	   value="/usr/local/bin/gdb --directory=/usr/local/bin --ex run --args" />
   <arg name="octomap_topic" default="/octomap_binary"/>
-  <arg name="hist_resolution" default="0.05" />
+  <arg name="hist_resolution" default="0.087222222" />
   <arg name="max_plan_range" default="1.0" />
   <arg name="map_resolution" default="0.15" />
 
@@ -25,5 +25,8 @@
     <param name="map_resolution" value="$(arg map_resolution)" />
     <param name="max_plan_range" value="$(arg max_plan_range)" />
     <param name="pose_topic" value="/mavros/local_position/pose" />
+    <param name="vehicle_safety_radius" value="0.2" />
+    <param name="turning_radius_l" value="0.2" />
+    <param name="turning_radius_r" value="0.2" />
   </node>
 </launch>
