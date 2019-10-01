@@ -20,7 +20,7 @@ public:
     turning_radius_l_(turning_radius_l),
     turning_radius_r_(turning_radius_r)
   {
-    radius_ = size_[size_.maxAxis()];
+    radius_ = size_[size_.maxAxis()] / 2.0;
   }
 
   ~VehicleState() {}
