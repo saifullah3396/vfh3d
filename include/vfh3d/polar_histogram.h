@@ -57,6 +57,12 @@ private:
         height_ - 1);
   }
 
+  double computeDist(const double& t_az, const double& t_ae, const double& az, const double& ae) {
+    auto dz = t_az - az;
+    auto de = t_ae - ae;
+    return sqrt(dz*dz + de*de);
+  }
+
   class HistVoxel {
   public:
     HistVoxel(
