@@ -33,7 +33,6 @@ public:
 private:
   // ros
   ros::NodeHandle nh_;
-  tf::Pose goal_;
 
   // publishers
   ros::Publisher histogram_pub_, planned_target_pub_;
@@ -45,7 +44,6 @@ private:
   bool pose_recieved_ = {false};
 
   // params
-  double max_plan_range_;
   double map_resolution_;
   
   // planning

@@ -7,11 +7,11 @@ VFH3DPlanner::VFH3DPlanner() {
   // get params
   auto p_nh = ros::NodeHandle("~");
   std::string octomap_topic, pose_topic;
-  double hist_resolution;
+  double hist_resolution, max_plan_range;
   p_nh.getParam("octomap_topic", octomap_topic);
   p_nh.getParam("pose_topic", pose_topic);
   p_nh.getParam("map_resolution", map_resolution_);
-  p_nh.getParam("max_plan_range", max_plan_range_);
+  p_nh.getParam("max_plan_range", max_plan_range);
   p_nh.getParam("hist_resolution", hist_resolution);
 
   double vehicle_safety_radius;
@@ -45,7 +45,7 @@ VFH3DPlanner::VFH3DPlanner() {
   polar_histogram_ = 
     std::unique_ptr<PolarHistogram>(
         new PolarHistogram(
-          oc_tree_, vehicle_state_, hist_resolution));
+          oc_tree_, vehicle_state_, hist_resolution, max_plan_range));
 
   // Initialize subscribers
   vehicle_pose_sub_ = 
@@ -76,6 +76,7 @@ void VFH3DPlanner::poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg) {
 
 void VFH3DPlanner::goalCb(const geometry_msgs::PoseConstPtr& goal_msg) {
   tf::poseMsgToTF(*goal_msg, goal_);
+  update();
 }
 
 void VFH3DPlanner::octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg) {
@@ -83,14 +84,11 @@ void VFH3DPlanner::octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg) {
     auto new_tree = static_cast<OcTree*>(octomap_msgs::binaryMsgToMap(*octomap_msg));
     oc_tree_->swapContent(*new_tree);
     delete new_tree;
-
-    update();
-    ros::shutdown();
   }
 }
 
 void VFH3DPlanner::update() {
-  polar_histogram_->update(max_plan_range_);
+  polar_histogram_->update();
   bbx_cells_pub_.publish(polar_histogram_->getBbxMarkers());
   hist_grid_pub_.publish(polar_histogram_->getDataMarkers());
 }
