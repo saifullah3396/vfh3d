@@ -13,5 +13,11 @@ namespace utils {
     return y;
   }
 
+  tf::Vector3 getRPY(const tf::Quaternion& q) {
+    double r, p, y;
+    tf::Matrix3x3(q).getRPY(r, p, y);
+    return tf::Vector3(r, p, y);
+  }
+
 }
 }

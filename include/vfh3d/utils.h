@@ -9,6 +9,7 @@ namespace utils {
 
   octomath::Vector3 tfToOctomath(const tf::Vector3& tf);
   double getYaw(const tf::Quaternion& q);
+  tf::Vector3 getRPY(const tf::Quaternion& q);
 
 }
 }

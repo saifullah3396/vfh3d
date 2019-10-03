@@ -43,6 +43,7 @@ public:
   octomath::Vector3 min() const { return utils::tfToOctomath(min_); }
   octomath::Vector3 max() const { return utils::tfToOctomath(max_); }
   double getYaw() const { return utils::getYaw(pose_.getRotation()); }
+  tf::Vector3 getRPY() const { return utils::getRPY(pose_.getRotation()); }
 
 private:
   tf::Pose pose_; // vehicle pose
