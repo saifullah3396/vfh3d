@@ -40,10 +40,20 @@ class PolarHistogram {
 
 private:
   template <typename Vector3>
+  int computeAzimuthAngle(const Vector3& p) const {
+    return atan2(p.y(), p.x());
+  }
+
+  template <typename Vector3>
+  int computeElevationAngle(const Vector3& p) const {
+    return atan2(-p.z(), sqrt(p.x()*p.x() + p.y()*p.y()));
+  }
+
+  template <typename Vector3>
   int computeDiscreteAzimuthAngle(const Vector3& p) const {
     return 
       std::clamp(
-        width_half_ - floor((int)(atan2(p.y(), p.x()) / resolution_),
+        width_half_ - floor((int)computeAzimuthAngle(p)) / resolution_),
         0, width_ - 1);
   }
 
@@ -51,8 +61,7 @@ private:
   int computeDiscreteElevationAngle(const Vector3& p) const {
     return 
       std::clamp(
-        height_half_ - floor((int)(
-          atan2(-p.z(), sqrt(p.x()*p.x() + p.y()*p.y())) / resolution_)),
+        height_half_ - floor((int)computeElevationAngle(p)) / resolution_)),
         0,
         height_ - 1);
   }
