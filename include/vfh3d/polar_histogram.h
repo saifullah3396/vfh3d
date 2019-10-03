@@ -17,10 +17,13 @@ class PolarHistogram {
   PolarHistogram(
     const std::shared_ptr<OcTree>& oc_tree,
     const std::weak_ptr<VehicleState>& vehicle_state,
-    const double& resolution);
+    const double& resolution,
+    const double& max_plan_range,
+    const int& window_size_x = 3,
+    const int& window_size_y = 3);
   ~PolarHistogram() {}
 
-  void update(const double& max_plan_range);
+  void update();
   bool inSphere(const octomap::point3d& p, const double& radius);
 
   visualization_msgs::MarkerArray getBbxMarkers() {
@@ -41,9 +44,9 @@ private:
       PolarHistogram* histogram) :
       position_(position),
       occ_value_(occ_value),
-      histogram_(histogram)
+      h_(histogram)
     {
-      vehicle_position_ = histogram_->vehicle_state_.lock()->center();
+      vehicle_position_ = h_->vehicle_state_.lock()->center();
       dist_from_vehicle_ = (position - vehicle_position_).norm();
     }
 
@@ -54,38 +57,54 @@ private:
 
       auto diff = position_ - vehicle_position_;
       // azimuth angle histogram x - coordinate
-      int bz = floor((int)(atan2(diff.y(), diff.x()) / histogram_->resolution_)) + histogram_->data_.cols() / 2.0;
+      int bz = h_->width_half_ - floor((int)(atan2(diff.y(), diff.x()) / h_->resolution_));
 
       // elevation angle histogram y - coordinate
       int be = 
-        floor((int)(
-          atan2(diff.z(), sqrt(diff.x()*diff.x() + diff.y()*diff.y())) /
-          histogram_->resolution_)) + 
-          histogram_->data_.rows() / 2.0;
-      
-      be = std::min(std::max(be, 0), (int)histogram_->data_.rows());
-      bz = std::min(std::max(bz, 0), (int)histogram_->data_.cols());
+          h_->height_half_ - floor((int)(
+          atan2(-diff.z(), sqrt(diff.x()*diff.x() + diff.y()*diff.y())) /
+          h_->resolution_));
+
+      be = std::min(std::max(be, 0), h_->height_ - 1);
+      bz = std::min(std::max(bz, 0), h_->width_ - 1);
+
       // each voxel affects multiple histogram bins within its size range
-      auto oneOverRes = 1.0 / histogram_->resolution_;
-      min_max_angle_ = floor(oneOverRes * asin(std::min(histogram_->enlargement_radius_ / dist_from_vehicle_, 1.0)));
-      auto r_min = std::max((int)(be - min_max_angle_), 0);
-      auto r_max = std::min((int)(be + min_max_angle_), (int)histogram_->data_.rows());
-      auto c_min = std::max((int)(bz - min_max_angle_), 0);
-      auto c_max = std::min((int)(bz + min_max_angle_), (int)histogram_->data_.cols());
-      for (int r = r_min; r < r_max; ++r) {
-        for (int c = c_min; c < c_max; ++c) {
-          if (histogram_->data_(r, c) == histogram_->data_(r, c))
-            histogram_->data_(r, c) += weight_;
-          else 
-            histogram_->data_(r, c) = weight_;
+      if (occ_value_ > 0.5) {
+        min_max_angle_ = floor(h_->res_inverse_ * asin(std::min(h_->enlargement_radius_ / dist_from_vehicle_, 1.0)));
+      } else {
+        min_max_angle_ = floor(h_->res_inverse_ * asin(std::min(h_->voxel_radius_ / dist_from_vehicle_, 1.0)));
+      }
+      if (min_max_angle_ > 0) {
+        int r_min = std::max((int)(be - min_max_angle_), 0);
+        int r_max = std::min((int)(be + min_max_angle_), h_->height_ - 1);
+        int c_min = bz - min_max_angle_;
+        int c_max = bz + min_max_angle_;
+        for (int r = r_min; r < r_max; ++r) {
+          for (int c = c_min; c < c_max; ++c) {
+            int wrapped_c = c;
+            if (wrapped_c >= h_->width_) {
+              wrapped_c = c - h_->width_;
+            } else if (wrapped_c < 0) {
+              wrapped_c = c + h_->width_;
+            }
+            if (h_->data_(r, wrapped_c) == h_->data_(r, wrapped_c))
+              h_->data_(r, wrapped_c) += weight_;
+            else 
+              h_->data_(r, wrapped_c) = weight_;
+          }
         }
+      } else {
+        if (h_->data_(be, bz) == h_->data_(be, bz))
+          h_->data_(be, bz) += weight_;
+        else 
+          h_->data_(be, bz) = weight_;
       }
     }
 
   private:
     void computeWeight() {
-      auto min_dist_from_vehicle = dist_from_vehicle_ - histogram_->enlargement_radius_;
-      weight_ = pow(occ_value_, 2) * (histogram_->const_a_ - histogram_->const_b_ * min_dist_from_vehicle);
+      auto min_dist_from_vehicle = dist_from_vehicle_ - h_->enlargement_radius_;
+      weight_ = pow(occ_value_, 2) * (h_->const_a_ - h_->const_b_ * min_dist_from_vehicle);
     }
 
     octomap::point3d position_, vehicle_position_;
@@ -93,7 +112,7 @@ private:
     double dist_from_vehicle_;
     double min_max_angle_;
     double weight_;
-    PolarHistogram* histogram_;
+    PolarHistogram* h_;
   };
 
   double histSum() {
@@ -126,12 +145,23 @@ private:
     return sqrt(sum / data_.size() - 1);
   }
 
+  tf::Pose goal_;
+
   double resolution_;
-  size_t height_, width_;
+  double res_inverse_;
+  int height_, width_;
+  int height_half_, width_half_;
   double enlargement_radius_;
   double voxel_radius_;
   double const_a_, const_b_;
+  double max_plan_range_;
+  int window_size_x_, window_size_y_;
+  int pad_rows_, pad_cols_;
+  const int max_window_size_ = {7};
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> data_;
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> data_pitch_lut_;
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> data_yaw_lut_;
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> padded_data_;
 
   std::shared_ptr<OcTree> oc_tree_;
   std::weak_ptr<VehicleState> vehicle_state_;
