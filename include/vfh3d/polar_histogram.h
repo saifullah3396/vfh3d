@@ -26,6 +26,10 @@ class PolarHistogram {
   void update();
   bool inSphere(const octomap::point3d& p, const double& radius);
 
+  void setTargetVel(const tf::Vector3& target_vel) {
+    target_vel_ = target_vel;
+  }
+
   visualization_msgs::MarkerArray getBbxMarkers() {
     return bbx_markers_;
   }
@@ -145,7 +149,7 @@ private:
     return sqrt(sum / data_.size() - 1);
   }
 
-  tf::Pose goal_;
+  tf::Vector3 target_vel_;
 
   double resolution_;
   double res_inverse_;

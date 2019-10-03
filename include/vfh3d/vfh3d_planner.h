@@ -27,7 +27,7 @@ public:
 
   // callbacks
   void poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg);
-  void goalCb(const geometry_msgs::PoseConstPtr& goal_msg);
+  void targetCb(const geometry_msgs::TwistConstPtr& target_vel_msg);
   void octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg);
 
 private:
@@ -40,7 +40,7 @@ private:
   ros::Publisher hist_grid_pub_;
 
   // subscribers
-  ros::Subscriber vehicle_pose_sub_, octomap_sub_, goal_sub_;
+  ros::Subscriber vehicle_pose_sub_, octomap_sub_, target_vel_sub_;
   bool pose_recieved_ = {false};
 
   // params

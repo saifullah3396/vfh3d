@@ -6,10 +6,11 @@ namespace vfh3d {
 VFH3DPlanner::VFH3DPlanner() {
   // get params
   auto p_nh = ros::NodeHandle("~");
-  std::string octomap_topic, pose_topic;
+  std::string octomap_topic, pose_topic, target_vel_topic;
   double hist_resolution, max_plan_range;
   p_nh.getParam("octomap_topic", octomap_topic);
   p_nh.getParam("pose_topic", pose_topic);
+  p_nh.getParam("target_vel_topic", target_vel_topic);
   p_nh.getParam("map_resolution", map_resolution_);
   p_nh.getParam("max_plan_range", max_plan_range);
   p_nh.getParam("hist_resolution", hist_resolution);
@@ -51,9 +52,9 @@ VFH3DPlanner::VFH3DPlanner() {
   vehicle_pose_sub_ = 
     nh_.subscribe<geometry_msgs::PoseStamped>(
       pose_topic, 10, &VFH3DPlanner::poseCb, this);
-  goal_sub_ = 
-    nh_.subscribe<geometry_msgs::Pose>(
-      "goal_in", 10, &VFH3DPlanner::goalCb, this);
+  target_vel_sub_ = 
+    nh_.subscribe<geometry_msgs::Twist>(
+      target_vel_topic, 10, &VFH3DPlanner::targetCb, this);
   octomap_sub_ = 
     nh_.subscribe<octomap_msgs::Octomap>(
       octomap_topic, 10, &VFH3DPlanner::octomapCb, this);
@@ -74,8 +75,10 @@ void VFH3DPlanner::poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg) {
   pose_recieved_ = true;
 }
 
-void VFH3DPlanner::goalCb(const geometry_msgs::PoseConstPtr& goal_msg) {
-  tf::poseMsgToTF(*goal_msg, goal_);
+void VFH3DPlanner::targetCb(const geometry_msgs::TwistConstPtr& target_vel_msg) {
+  auto target_vel = 
+    tf::Vector3(target_vel_msg->linear.x, target_vel_msg->linear.y, target_vel_msg->linear.z);
+  polar_histogram_->setTargetVel(target_vel);
   update();
 }
 
