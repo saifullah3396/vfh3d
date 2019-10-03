@@ -42,6 +42,7 @@ private:
   // subscribers
   ros::Subscriber vehicle_pose_sub_, octomap_sub_, target_vel_sub_;
   bool pose_recieved_ = {false};
+  bool octomap_recieved_ = {false};
 
   // params
   double map_resolution_;

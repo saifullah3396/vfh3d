@@ -79,15 +79,15 @@ void VFH3DPlanner::targetCb(const geometry_msgs::TwistConstPtr& target_vel_msg) 
   auto target_vel = 
     tf::Vector3(target_vel_msg->linear.x, target_vel_msg->linear.y, target_vel_msg->linear.z);
   polar_histogram_->setTargetVel(target_vel);
-  update();
+  if (pose_recieved_ && octomap_recieved_)
+    update();
 }
 
 void VFH3DPlanner::octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg) {
-  if (pose_recieved_) {
-    auto new_tree = static_cast<OcTree*>(octomap_msgs::binaryMsgToMap(*octomap_msg));
-    oc_tree_->swapContent(*new_tree);
-    delete new_tree;
-  }
+  auto new_tree = static_cast<OcTree*>(octomap_msgs::binaryMsgToMap(*octomap_msg));
+  oc_tree_->swapContent(*new_tree);
+  delete new_tree;
+  octomap_recieved_ = true;
 }
 
 void VFH3DPlanner::update() {
