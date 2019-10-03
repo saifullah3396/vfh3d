@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <octomap/octomap.h>
@@ -40,36 +41,30 @@ class PolarHistogram {
 
 private:
   template <typename Vector3>
-  int computeAzimuthAngle(const Vector3& p) const {
+  double computeAzimuthAngle(const Vector3& p) const {
     return atan2(p.y(), p.x());
   }
 
   template <typename Vector3>
-  int computeElevationAngle(const Vector3& p) const {
+  double computeElevationAngle(const Vector3& p) const {
     return atan2(-p.z(), sqrt(p.x()*p.x() + p.y()*p.y()));
   }
 
   template <typename Vector3>
   int computeDiscreteAzimuthAngle(const Vector3& p) const {
     return 
-      std::clamp(
-        width_half_ - floor((int)computeAzimuthAngle(p)) / resolution_),
+      utils::clamp(
+        (int)(width_half_ - floor(computeAzimuthAngle(p)) / resolution_),
         0, width_ - 1);
   }
 
   template <typename Vector3>
   int computeDiscreteElevationAngle(const Vector3& p) const {
     return 
-      std::clamp(
-        height_half_ - floor((int)computeElevationAngle(p)) / resolution_)),
+      utils::clamp(
+        (int)(height_half_ - floor(computeElevationAngle(p)) / resolution_),
         0,
         height_ - 1);
-  }
-
-  double computeDist(const double& t_az, const double& t_ae, const double& az, const double& ae) {
-    auto dz = t_az - az;
-    auto de = t_ae - ae;
-    return sqrt(dz*dz + de*de);
   }
 
   class HistVoxel {
@@ -188,6 +183,11 @@ private:
   int window_size_x_, window_size_y_;
   int pad_rows_, pad_cols_;
   const int max_window_size_ = {7};
+  double target_diff_w_ = {5.0};
+  double vehicle_diff_w_ = {2.0};
+  double prev_target_diff_w_ = {2.0};
+  double best_yaw_ = {NAN};
+  double best_pitch_ = {NAN};
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> data_;
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> data_pitch_lut_;
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> data_yaw_lut_;
