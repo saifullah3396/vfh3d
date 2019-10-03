@@ -39,6 +39,23 @@ class PolarHistogram {
   }
 
 private:
+  template <typename Vector3>
+  int computeDiscreteAzimuthAngle(const Vector3& p) const {
+    return 
+      std::clamp(
+        width_half_ - floor((int)(atan2(p.y(), p.x()) / resolution_),
+        0, width_ - 1);
+  }
+
+  template <typename Vector3>
+  int computeDiscreteElevationAngle(const Vector3& p) const {
+    return 
+      std::clamp(
+        height_half_ - floor((int)(
+          atan2(-p.z(), sqrt(p.x()*p.x() + p.y()*p.y())) / resolution_)),
+        0,
+        height_ - 1);
+  }
 
   class HistVoxel {
   public:
@@ -61,16 +78,10 @@ private:
 
       auto diff = position_ - vehicle_position_;
       // azimuth angle histogram x - coordinate
-      int bz = h_->width_half_ - floor((int)(atan2(diff.y(), diff.x()) / h_->resolution_));
+      auto bz = h_->computeDiscreteAzimuthAngle(diff);
 
       // elevation angle histogram y - coordinate
-      int be = 
-          h_->height_half_ - floor((int)(
-          atan2(-diff.z(), sqrt(diff.x()*diff.x() + diff.y()*diff.y())) /
-          h_->resolution_));
-
-      be = std::min(std::max(be, 0), h_->height_ - 1);
-      bz = std::min(std::max(bz, 0), h_->width_ - 1);
+      auto be = h_->computeDiscreteElevationAngle(diff);
 
       // each voxel affects multiple histogram bins within its size range
       if (occ_value_ > 0.5) {
