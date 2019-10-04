@@ -1,0 +1,5 @@
+  <launch>
+    <!-- Start RVIZ Visualisation -->
+    <arg name="rvizconfig" default="$(find vfh3d)/rviz/default.rviz" />
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+  </launch>
