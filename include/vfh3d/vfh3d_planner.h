@@ -27,7 +27,7 @@ public:
 
   // callbacks
   void poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg);
-  void targetCb(const geometry_msgs::TwistConstPtr& target_vel_msg);
+  void targetCb(const geometry_msgs::TwistStampedConstPtr& target_vel_msg);
   void octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg);
 
 private:
@@ -35,9 +35,10 @@ private:
   ros::NodeHandle nh_;
 
   // publishers
-  ros::Publisher histogram_pub_, planned_target_pub_;
+  ros::Publisher histogram_pub_, planned_target_vel_pub_;
   ros::Publisher bbx_cells_pub_;
   ros::Publisher hist_grid_pub_;
+  ros::Publisher cell_weights_pub_;
 
   // subscribers
   ros::Subscriber vehicle_pose_sub_, octomap_sub_, target_vel_sub_;
