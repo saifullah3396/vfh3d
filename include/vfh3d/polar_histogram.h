@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <numeric>
 #include <string>
 #include <vector>
 #include <octomap/octomap.h>
@@ -20,24 +21,36 @@ class PolarHistogram {
     const std::weak_ptr<VehicleState>& vehicle_state,
     const double& resolution,
     const double& max_plan_range,
+    const double& const_a = 10.0,
     const int& window_size_x = 3,
     const int& window_size_y = 3);
   ~PolarHistogram() {}
 
   void update();
+  #ifdef BUILD_WITH_VISUALIZATION
+  void resetVisualization();
+  #endif
+  void generateHistogram();
+  void binarizeHistogram();
+  void windowSearch();
   bool inSphere(const octomap::point3d& p, const double& radius);
-
   void setTargetVel(const tf::Vector3& target_vel) {
     target_vel_ = target_vel;
   }
 
-  visualization_msgs::MarkerArray getBbxMarkers() {
+  tf::Vector3 getUpdatedVel() const {
+    return updated_vel_;
+  }
+
+  #ifdef BUILD_WITH_VISUALIZATION
+  visualization_msgs::MarkerArray getBbxMarkers() const {
     return bbx_markers_;
   }
 
-  visualization_msgs::MarkerArray getDataMarkers() {
+  visualization_msgs::MarkerArray getDataMarkers() const {
     return data_markers_;
   }
+  #endif
 
 private:
   template <typename Vector3>
@@ -54,7 +67,7 @@ private:
   int computeDiscreteAzimuthAngle(const Vector3& p) const {
     return 
       utils::clamp(
-        (int)(width_half_ - floor(computeAzimuthAngle(p)) / resolution_),
+        (int)(width_half_ - floor(computeAzimuthAngle(p) / resolution_)),
         0, width_ - 1);
   }
 
@@ -62,7 +75,7 @@ private:
   int computeDiscreteElevationAngle(const Vector3& p) const {
     return 
       utils::clamp(
-        (int)(height_half_ - floor(computeElevationAngle(p)) / resolution_),
+        (int)(height_half_ - floor(computeElevationAngle(p) / resolution_)),
         0,
         height_ - 1);
   }
@@ -72,20 +85,22 @@ private:
     HistVoxel(
       const octomap::point3d& position,
       const float& occ_value,
+      const float& size,
       PolarHistogram* histogram) :
       position_(position),
+      radius_(size / 2.0),
       occ_value_(occ_value),
       h_(histogram)
     {
+      enlargement_radius_ = h_->enlargement_radius_wo_voxel_ + radius_;
       vehicle_position_ = h_->vehicle_state_.lock()->center();
       dist_from_vehicle_ = (position - vehicle_position_).norm();
     }
 
+    void setWeight(const double &weight) { weight_ = weight; }
+    double getWeight() const { return weight_; }
     double dist() const { return dist_from_vehicle_; }
     void updateHist() {
-      // compute weight
-      computeWeight();
-
       auto diff = position_ - vehicle_position_;
       // azimuth angle histogram x - coordinate
       auto bz = h_->computeDiscreteAzimuthAngle(diff);
@@ -94,10 +109,16 @@ private:
       auto be = h_->computeDiscreteElevationAngle(diff);
 
       // each voxel affects multiple histogram bins within its size range
-      if (occ_value_ > 0.5) {
-        min_max_angle_ = floor(h_->res_inverse_ * asin(std::min(h_->enlargement_radius_ / dist_from_vehicle_, 1.0)));
-      } else {
-        min_max_angle_ = floor(h_->res_inverse_ * asin(std::min(h_->voxel_radius_ / dist_from_vehicle_, 1.0)));
+      if (occ_value_ > 0) { // occupied voxel
+        // compute weight
+        computeWeight(true);
+        min_max_angle_ = 
+          floor(
+            h_->res_inverse_ * 
+            asin(std::min(enlargement_radius_ / dist_from_vehicle_, 1.0)));
+      } else { // free voxel
+        weight_ = 0.0;
+        min_max_angle_ = 0;
       }
       if (min_max_angle_ > 0) {
         int r_min = std::max((int)(be - min_max_angle_), 0);
@@ -127,8 +148,10 @@ private:
     }
 
   private:
-    void computeWeight() {
-      auto min_dist_from_vehicle = dist_from_vehicle_ - h_->enlargement_radius_;
+    void computeWeight(const bool& enlargement) {
+      double min_dist_from_vehicle;
+      if (enlargement) min_dist_from_vehicle = dist_from_vehicle_ - enlargement_radius_;
+      else min_dist_from_vehicle = dist_from_vehicle_ - radius_;
       weight_ = pow(occ_value_, 2) * (h_->const_a_ - h_->const_b_ * min_dist_from_vehicle);
     }
 
@@ -137,10 +160,12 @@ private:
     double dist_from_vehicle_;
     double min_max_angle_;
     double weight_;
+    double radius_, enlargement_radius_;
     PolarHistogram* h_;
   };
 
-  double histSum() {
+  double histMean() {
+    int count = 0;
     double sum = 0.0;
     for (int i = 0; i < data_.rows(); ++i) {
       for (int j = 0; j < data_.cols(); ++j) {
@@ -148,13 +173,10 @@ private:
         if (d != d)
           continue;
         sum += d;
+        count++;
       }
     }
-    return sum;
-  }
-
-  double histMean() {
-    return histSum() / data_.size();
+    return sum / count;
   }
 
   double histStd(const double& mean) {
@@ -170,14 +192,13 @@ private:
     return sqrt(sum / data_.size() - 1);
   }
 
-  tf::Vector3 target_vel_;
+  tf::Vector3 target_vel_, updated_vel_;
 
   double resolution_;
   double res_inverse_;
   int height_, width_;
   int height_half_, width_half_;
-  double enlargement_radius_;
-  double voxel_radius_;
+  double enlargement_radius_wo_voxel_;
   double const_a_, const_b_;
   double max_plan_range_;
   int window_size_x_, window_size_y_;
@@ -195,11 +216,13 @@ private:
 
   std::shared_ptr<OcTree> oc_tree_;
   std::weak_ptr<VehicleState> vehicle_state_;
+  #ifdef BUILD_WITH_VISUALIZATION
   int marker_id_;
   visualization_msgs::Marker cell_marker_;
   visualization_msgs::Marker point_marker_;
   visualization_msgs::MarkerArray bbx_markers_;
   visualization_msgs::MarkerArray data_markers_;
+  #endif
 };
 
 }

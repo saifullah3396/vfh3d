@@ -7,38 +7,40 @@ PolarHistogram::PolarHistogram(
   const std::weak_ptr<VehicleState>& vehicle_state,
   const double& resolution,
   const double& max_plan_range,
+  const double& const_a,
   const int& window_size_x,
   const int& window_size_y) :
   oc_tree_(oc_tree),
   vehicle_state_(vehicle_state),
   resolution_(resolution),
   max_plan_range_(max_plan_range),
+  const_a_(const_a),
+  const_b_(const_a / max_plan_range), // a - bd_max = 0
   window_size_x_(window_size_x),
   window_size_y_(window_size_y)
 {
-  cell_marker_.header.frame_id = "map";
-  cell_marker_.ns = "fbe3d";
-  cell_marker_.type = visualization_msgs::Marker::CUBE;
-  cell_marker_.action = visualization_msgs::Marker::MODIFY;
-  cell_marker_.color.a = 0.5;
-  cell_marker_.lifetime = ros::Duration(0.1);
-  auto res = oc_tree->getResolution();
-  cell_marker_.scale.x = res;
-  cell_marker_.scale.y = res;
-  cell_marker_.scale.z = res;
-  point_marker_ = cell_marker_;
-  point_marker_.type = visualization_msgs::Marker::CUBE;
-  point_marker_.scale.x = res / 5.0;
-  point_marker_.scale.y = res / 5.0;
-  point_marker_.scale.z = res / 5.0;
-  point_marker_.color.r = 1.0;
-  marker_id_ = 0;
+  #ifdef BUILD_WITH_VISUALIZATION
+    cell_marker_.header.frame_id = "map";
+    cell_marker_.ns = "fbe3d";
+    cell_marker_.type = visualization_msgs::Marker::CUBE;
+    cell_marker_.action = visualization_msgs::Marker::MODIFY;
+    cell_marker_.color.a = 0.5;
+    cell_marker_.lifetime = ros::Duration(0.1);
+    auto tree_resolution = oc_tree->getResolution();
+    cell_marker_.scale.x = tree_resolution;
+    cell_marker_.scale.y = tree_resolution;
+    cell_marker_.scale.z = tree_resolution;
+    point_marker_ = cell_marker_;
+    point_marker_.type = visualization_msgs::Marker::CUBE;
+    point_marker_.scale.x = tree_resolution / 5.0;
+    point_marker_.scale.y = tree_resolution / 5.0;
+    point_marker_.scale.z = tree_resolution / 5.0;
+    point_marker_.color.r = 1.0;
+    marker_id_ = 0;
+  #endif
 
   auto v = vehicle_state_.lock();
-  // in paper, it is robot_radius + safety_radius + voxel_size. voxel_size should be voxel_radius?
-  voxel_radius_ = oc_tree_->getResolution() * 0.5;
-  enlargement_radius_ = 
-    v->getRadius() + v->getSafetyRadius() + voxel_radius_;
+  enlargement_radius_wo_voxel_ = v->getRadius() + v->getSafetyRadius();
   res_inverse_ = 1.0 / resolution_;
   height_ = int(floor(M_PI / resolution_)); // steps in radians
   width_ = int(floor(2 * M_PI / resolution_)); // steps in radians
@@ -56,10 +58,7 @@ PolarHistogram::PolarHistogram(
     }
   }
 
-  const_a_ = 0.5;
-  const_b_ = (const_a_ - 1) / pow((max_plan_range - 1.0) / 2.0, 2);
-
-  // matrix padding
+  // matrix padding for moving window search
   assert(window_size_x_ % 2 != 0 && 
          window_size_x_ <= max_window_size_ &&
          "Window size should be an odd integer and less than max_size.");
@@ -73,57 +72,97 @@ PolarHistogram::PolarHistogram(
   padded_data_.setZero();
 }
 
-void PolarHistogram::update() {
+#ifdef BUILD_WITH_VISUALIZATION
+void PolarHistogram::resetVisualization()
+{
+  data_markers_.markers.clear();
   bbx_markers_.markers.clear();
+  marker_id_ = 0;
+}
+#endif
+
+void PolarHistogram::generateHistogram()
+{
+  // reset histogram
+  data_.setConstant(NAN);
+  #ifdef BUILD_WITH_VISUALIZATION
+  std::vector<double> weights;
+  cell_marker_.color.a = 0.25;
+  #endif
   auto v = vehicle_state_.lock();
   auto range = octomath::Vector3(max_plan_range_, max_plan_range_, max_plan_range_);
   auto min_hist_range = v->min() - range;
   auto max_hist_range = v->max() + range;
 
-  std_msgs::ColorRGBA color;
-  color.a = 1;
-  color.r = 1;
-  cell_marker_.color = color;
   // iterate through the nodes in the box
   auto begin = oc_tree_->begin_leafs_bbx(min_hist_range, max_hist_range);
   auto end = oc_tree_->end_leafs_bbx();
-  marker_id_ = 0;
-
-  // reset histogram
-  data_.setConstant(NAN);
   for(auto iter = begin; iter!= end; ++iter)
   {
-    auto voxel = HistVoxel(iter.getCoordinate(), iter->getOccupancy(), this);
+    auto voxel = HistVoxel(iter.getCoordinate(), std::max(iter->getValue(), 0.f), iter.getSize(), this);
     if (voxel.dist() > max_plan_range_) // not in sphere
       continue;
     // add weight of each voxel in histogram bins affected by it
     voxel.updateHist();
+    //voxel.setWeight(iter->getLogOdds());
 
-    /*if (iter->getValue() > 0) { // high probablity of occupied
-      color.r = 0;
-      color.b = 1;
-      cell_marker_.color = color;
-    } else { // else
-      color.r = 1;
-      color.b = 0;
-      cell_marker_.color = color;
-    }
-
+    #ifdef BUILD_WITH_VISUALIZATION
     auto coord = iter.getCoordinate();
+    cell_marker_.scale.x = iter.getSize();
+    cell_marker_.scale.y = iter.getSize();
+    cell_marker_.scale.z = iter.getSize();
     cell_marker_.pose.position.x = coord.x();
     cell_marker_.pose.position.y = coord.y();
     cell_marker_.pose.position.z = coord.z();
     cell_marker_.id = marker_id_++;
-    bbx_markers_.markers.push_back(cell_marker_);*/
+    bbx_markers_.markers.push_back(cell_marker_);
+    weights.push_back(voxel.getWeight());
+    #endif
   }
 
+  #ifdef BUILD_WITH_VISUALIZATION
+  std::vector<double> norm_weights(weights.size());
+  double min_w = *std::min_element(weights.begin(), weights.end());
+  double max_w = *std::max_element(weights.begin(), weights.end());
+  std::transform(
+    weights.begin(), 
+    weights.end(), 
+    norm_weights.begin(), [min_w, max_w](const double& w)
+    { return w-min_w/(max_w-min_w); }
+  );
+  for (int i = 0; i < bbx_markers_.markers.size(); ++i) {
+    auto v = norm_weights[i];
+    auto& m = bbx_markers_.markers[i];
+    if (v < 0.5) { // generate heat map from weights
+      m.color.r = 0;
+      m.color.g = int( 255./0.5 * v);
+      m.color.b = int( 255. + -255./0.5  * v);
+    } else {
+      m.color.r = int( 255./(1.0-0.5) * (v - 0.5));
+      m.color.g = int( 255. + -255./(1.0-0.5)  * (v - 0.5));
+      m.color.b = 0;
+    }
+  }
+  #endif
+}
+
+void PolarHistogram::binarizeHistogram()
+{
+  auto v = vehicle_state_.lock();
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> data_wo_nan = 
+    (data_.array().isNaN()).select(0, data_);
+  double hist_min = data_wo_nan.minCoeff();
+  double hist_max = data_wo_nan.maxCoeff();
+  data_wo_nan = (data_wo_nan.array() - hist_min) / (hist_max - hist_min);
+  data_ = (data_.array().isNaN()).select(0, data_wo_nan);
   auto mean = histMean();
-  auto std = histStd(mean);
-  data_markers_.markers.clear();
-  auto t_low = mean - std;
-  auto t_high = mean + std;
+  //auto std = histStd(mean);
+  auto t_low = mean;
+  auto t_high = mean;
   auto point_arrow_size = tf::Vector3(1, 0, 0);
-  bool ground_in_range = v->getPose().getOrigin().z() - enlargement_radius_ <= 0;
+  bool ground_in_range = // is ground within vehicle plan range?
+    v->getPose().getOrigin().z() - 
+    enlargement_radius_wo_voxel_ <= 0;
   for (int i = 0; i < height_; ++i) {
     for (int j = 0; j < width_; ++j) {
       // If robot height is close to ground
@@ -131,21 +170,13 @@ void PolarHistogram::update() {
         data_(i, j) = 1.0;      
       } else {
         const auto& d = data_(i, j);
-        if (d != d) { // if it is unseen
-          // If robot height is close to ground
-          //if (j > 0) data_(i, j) = data_(i, j-1);
-          //else data_(i, j) = 0.0;
-          data_(i, j) = 0.0;
-        } else if (d > t_high) {
+        if (d >= t_high) {
           data_(i, j) = 1.0;
         } else if (d < t_low) {
           data_(i, j) = 0.0;
-        } else {
-          if (j > 0) data_(i, j) = data_(i, j-1);
-          else data_(i, j) = 0.0;
         }
       }
-
+      #ifdef BUILD_WITH_VISUALIZATION
       if (data_(i, j) > 0.5) {
         point_marker_.color.a = 1.0;
         point_marker_.color.b = 1.0;
@@ -169,19 +200,22 @@ void PolarHistogram::update() {
       point_marker_.pose.orientation.z = t.getRotation().z();
       point_marker_.pose.orientation.w = t.getRotation().w();
       point_marker_.id = marker_id_++;
-      //data_markers_.markers.push_back(point_marker_);
+      data_markers_.markers.push_back(point_marker_);
+      #endif
     }
   }
+}
 
+void PolarHistogram::windowSearch()
+{
   padded_data_.block(pad_rows_, pad_cols_, height_, width_) = data_;
   padded_data_.block(pad_rows_, 0, height_, pad_cols_) = data_.rightCols(pad_cols_);
   padded_data_.block(pad_rows_, padded_data_.cols() - pad_cols_, height_, pad_cols_) = data_.leftCols(pad_cols_);
-  //padded = (padded.array().isNaN()).select(padded, 1); // set Nan values to occupied since we don't know
   // find target velocity direction and angles
   auto t_direction = target_vel_.normalized();
   auto t_yaw = computeAzimuthAngle(t_direction);
   auto t_pitch = computeElevationAngle(t_direction);
-  auto robot_yaw = v->getYaw();
+  auto robot_yaw = vehicle_state_.lock()->getYaw();
   double min_weight = 1e6;
   int best_i = -1, best_j = -1;
   auto prev_best_yaw = best_yaw_;
@@ -213,24 +247,6 @@ void PolarHistogram::update() {
           best_i = index_i;
           best_j = index_j;
         }
-        
-
-        tf::Transform t;
-        t.setRotation(tf::createQuaternionFromRPY(0, pitch, yaw));
-        t.setOrigin(tf::Vector3(v->center().x(), v->center().y(), v->center().z()));
-        auto point = t * point_arrow_size;
-        point_marker_.color.b = 1.0;
-        point_marker_.color.r = 0.0;
-        point_marker_.color.g = 0.0;
-        point_marker_.pose.position.x = point.x();
-        point_marker_.pose.position.y = point.y();
-        point_marker_.pose.position.z = point.z();
-        point_marker_.pose.orientation.x = t.getRotation().x();
-        point_marker_.pose.orientation.y = t.getRotation().y();
-        point_marker_.pose.orientation.z = t.getRotation().z();
-        point_marker_.pose.orientation.w = t.getRotation().w();
-        point_marker_.id = marker_id_++;
-        data_markers_.markers.push_back(point_marker_);
       } 
     }
   }
@@ -238,23 +254,26 @@ void PolarHistogram::update() {
   if (best_i != -1) {
     best_yaw_ = data_yaw_lut_(best_i, best_j);
     best_pitch_ = data_pitch_lut_(best_i, best_j);
-    tf::Transform t;
-    t.setRotation(tf::createQuaternionFromRPY(0, best_pitch_, best_yaw_));
-    t.setOrigin(tf::Vector3(v->center().x(), v->center().y(), v->center().z()));
-    auto point = t * point_arrow_size;
-    point_marker_.color.b = 0.0;
-    point_marker_.color.r = 0.0;
-    point_marker_.color.g = 1.0;
-    point_marker_.pose.position.x = point.x();
-    point_marker_.pose.position.y = point.y();
-    point_marker_.pose.position.z = point.z();
-    point_marker_.pose.orientation.x = t.getRotation().x();
-    point_marker_.pose.orientation.y = t.getRotation().y();
-    point_marker_.pose.orientation.z = t.getRotation().z();
-    point_marker_.pose.orientation.w = t.getRotation().w();
-    point_marker_.id = marker_id_++;
-    data_markers_.markers.push_back(point_marker_);
+    // update direction
+    t_direction[0] = cos(best_yaw_) * cos(best_pitch_);
+    t_direction[1] = sin(best_yaw_) * cos(best_pitch_);
+    t_direction[2] = -sin(best_pitch_);
+    updated_vel_ = target_vel_.length() * t_direction;
+  } else {
+    ROS_ERROR("No solution found for the given target velocity by the vfh3d+ local planner!");
   }
+
+  ROS_DEBUG("target_vel: %f, %f, %f", target_vel_.x(), target_vel_.y(), target_vel_.z());
+  ROS_DEBUG("updated_vel: %f, %f, %f",updated_vel_.x(), updated_vel_.y(), updated_vel_.z());
+}
+
+void PolarHistogram::update() {
+  #ifdef BUILD_WITH_VISUALIZATION
+  resetVisualization();
+  #endif
+  generateHistogram();
+  binarizeHistogram();
+  windowSearch();
 }
 
 }
