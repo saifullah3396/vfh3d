@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(vfh3d)
 
+option (BUILD_WITH_VISUALIZATION "Build with visualizations." OFF)
+if (BUILD_WITH_VISUALIZATION)
+  add_definitions(-DBUILD_WITH_VISUALIZATION)
+endif()
+
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
@@ -139,7 +144,7 @@ add_executable(${PROJECT_NAME}_node
   src/vfh3d_planner.cpp
   src/polar_histogram.cpp
   src/utils.cpp)
-add_executable(octomap_bbx_iter_test_node src/octomap_bbx_iter_test.cpp)
+add_executable(polar_histogram_test_node src/polar_histogram_test.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -156,7 +161,7 @@ target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
 )
 
-target_link_libraries(octomap_bbx_iter_test_node
+target_link_libraries(polar_histogram_test_node
   ${catkin_LIBRARIES}
 )
 
