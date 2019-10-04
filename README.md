@@ -31,3 +31,8 @@ catkin_make
 ```
 roslaunch vfh3d vfh3d_planner_test.launch
 ```
+
+## Acknowledgements
+- The implementation of the algorithm is based on the paper:
+http://anet.uantwerpen.be/docman/irua/0c700e/56e4e8c5.pdf
+- The open-source work done at https://github.com/Yonder-Dynamics/vfh3d was a great help for understanding the algorithm.
