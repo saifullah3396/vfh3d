@@ -53,18 +53,14 @@ VFH3DPlanner::VFH3DPlanner() {
   vehicle_pose_sub_ = 
     nh_.subscribe<geometry_msgs::PoseStamped>(
       pose_topic, 10, &VFH3DPlanner::poseCb, this);
-  target_vel_sub_ = 
-    nh_.subscribe<geometry_msgs::TwistStamped>(
-      target_vel_topic, 10, &VFH3DPlanner::targetCb, this);
   octomap_sub_ = 
     nh_.subscribe<octomap_msgs::Octomap>(
       octomap_topic, 10, &VFH3DPlanner::octomapCb, this);
-
-  // Initialize publishers
-  planned_target_vel_pub_ = 
-    nh_.advertise<geometry_msgs::TwistStamped>(
-      "/vfh3d/planned_target_vel", 10);
   
+  // Initialize service for updating input target with local plan
+  std::string service_name = "/vfh3d/correct_target";
+  planner_service_ = nh_.advertiseService(service_name, &VFH3DPlanner::correctTarget, this);
+
   #ifdef BUILD_WITH_VISUALIZATION
   bbx_cells_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("/vfh3d/bbx_cells", 10);
   hist_grid_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("/vfh3d/hist_grid", 10);
@@ -76,35 +72,41 @@ void VFH3DPlanner::poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg) {
   pose_recieved_ = true;
 }
 
-void VFH3DPlanner::targetCb(const geometry_msgs::TwistStampedConstPtr& target_vel_msg) {
-  auto target_vel = 
-    tf::Vector3(target_vel_msg->twist.linear.x, target_vel_msg->twist.linear.y, target_vel_msg->twist.linear.z);
-  polar_histogram_->setTargetVel(target_vel);
-  if (pose_recieved_ && octomap_recieved_)
-    update();
+bool VFH3DPlanner::correctTarget(
+  vfh3d::CorrectTarget::Request& req,
+  vfh3d::CorrectTarget::Response& res)
+{
+  if (histogram_updated_) {
+    auto target_vel = 
+      tf::Vector3(req.target_vel.twist.linear.x, req.target_vel.twist.linear.y, req.target_vel.twist.linear.z);
+    auto planned_vel = polar_histogram_->windowSearch(target_vel);
+    res.corrected_vel.header.frame_id = "map";
+    res.corrected_vel.header.stamp = ros::Time::now();
+    res.corrected_vel.twist.linear.x = planned_vel.x();
+    res.corrected_vel.twist.linear.y = planned_vel.y();
+    res.corrected_vel.twist.linear.z = planned_vel.z();
+    return true;
+  } else {
+    ROS_WARN("Polar Histogram not initialized yet. Cannot correct velocity.");
+    return false;
+  }
 }
 
 void VFH3DPlanner::octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg) {
   auto new_tree = static_cast<OcTree*>(octomap_msgs::fullMsgToMap(*octomap_msg));
   oc_tree_->swapContent(*new_tree);
   delete new_tree;
-  octomap_recieved_ = true;
+  if (pose_recieved_) // update histogram on every octomap callback
+    update();
 }
 
 void VFH3DPlanner::update() {
   polar_histogram_->update();
-  auto planned_vel = polar_histogram_->getUpdatedVel();
-  geometry_msgs::TwistStamped planned_vel_msg;
-  planned_vel_msg.header.frame_id = "map";
-  planned_vel_msg.header.stamp = ros::Time::now();
-  planned_vel_msg.twist.linear.x = planned_vel.x();
-  planned_vel_msg.twist.linear.y = planned_vel.y();
-  planned_vel_msg.twist.linear.z = planned_vel.z();
-  planned_target_vel_pub_.publish(planned_vel_msg);
   #ifdef BUILD_WITH_VISUALIZATION
     bbx_cells_pub_.publish(polar_histogram_->getBbxMarkers());
     hist_grid_pub_.publish(polar_histogram_->getDataMarkers());
   #endif
+  histogram_updated_ = true;
 }
 
 }

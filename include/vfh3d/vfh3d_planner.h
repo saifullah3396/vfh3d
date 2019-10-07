@@ -12,6 +12,7 @@
 #include <vfh3d/utils.h>
 #include <vfh3d/vehicle_state.h>
 #include <vfh3d/polar_histogram.h>
+#include <vfh3d/CorrectTarget.h>
 
 using namespace octomap;
 
@@ -27,23 +28,30 @@ public:
 
   // callbacks
   void poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg);
-  void targetCb(const geometry_msgs::TwistStampedConstPtr& target_vel_msg);
   void octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg);
+
+  // services
+  bool correctTarget(
+    vfh3d::CorrectTarget::Request& req,
+    vfh3d::CorrectTarget::Response& res);
 
 private:
   // ros
   ros::NodeHandle nh_;
 
   // publishers
-  ros::Publisher histogram_pub_, planned_target_vel_pub_;
+  ros::Publisher histogram_pub_;
   ros::Publisher bbx_cells_pub_;
   ros::Publisher hist_grid_pub_;
   ros::Publisher cell_weights_pub_;
 
   // subscribers
-  ros::Subscriber vehicle_pose_sub_, octomap_sub_, target_vel_sub_;
+  ros::Subscriber vehicle_pose_sub_, octomap_sub_;
   bool pose_recieved_ = {false};
-  bool octomap_recieved_ = {false};
+  bool histogram_updated_ = {false};
+
+  // service
+  ros::ServiceServer planner_service_;
 
   // params
   double map_resolution_;

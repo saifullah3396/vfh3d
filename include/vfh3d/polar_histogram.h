@@ -27,20 +27,8 @@ class PolarHistogram {
   ~PolarHistogram() {}
 
   void update();
-  #ifdef BUILD_WITH_VISUALIZATION
-  void resetVisualization();
-  #endif
-  void generateHistogram();
-  void binarizeHistogram();
-  void windowSearch();
+  tf::Vector3 windowSearch(const tf::Vector3& target_vel);
   bool inSphere(const octomap::point3d& p, const double& radius);
-  void setTargetVel(const tf::Vector3& target_vel) {
-    target_vel_ = target_vel;
-  }
-
-  tf::Vector3 getUpdatedVel() const {
-    return updated_vel_;
-  }
 
   #ifdef BUILD_WITH_VISUALIZATION
   visualization_msgs::MarkerArray getBbxMarkers() const {
@@ -53,6 +41,12 @@ class PolarHistogram {
   #endif
 
 private:
+  #ifdef BUILD_WITH_VISUALIZATION
+  void resetVisualization();
+  #endif
+  void generateHistogram();
+  void binarizeHistogram();
+
   template <typename Vector3>
   double computeAzimuthAngle(const Vector3& p) const {
     return atan2(p.y(), p.x());
@@ -191,8 +185,6 @@ private:
     }
     return sqrt(sum / data_.size() - 1);
   }
-
-  tf::Vector3 target_vel_, updated_vel_;
 
   double resolution_;
   double res_inverse_;

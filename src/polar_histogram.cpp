@@ -206,13 +206,14 @@ void PolarHistogram::binarizeHistogram()
   }
 }
 
-void PolarHistogram::windowSearch()
+tf::Vector3 PolarHistogram::windowSearch(const tf::Vector3& target_vel)
 {
+  tf::Vector3 updated_vel;
   padded_data_.block(pad_rows_, pad_cols_, height_, width_) = data_;
   padded_data_.block(pad_rows_, 0, height_, pad_cols_) = data_.rightCols(pad_cols_);
   padded_data_.block(pad_rows_, padded_data_.cols() - pad_cols_, height_, pad_cols_) = data_.leftCols(pad_cols_);
   // find target velocity direction and angles
-  auto t_direction = target_vel_.normalized();
+  auto t_direction = target_vel.normalized();
   auto t_yaw = computeAzimuthAngle(t_direction);
   auto t_pitch = computeElevationAngle(t_direction);
   auto robot_yaw = vehicle_state_.lock()->getYaw();
@@ -258,13 +259,15 @@ void PolarHistogram::windowSearch()
     t_direction[0] = cos(best_yaw_) * cos(best_pitch_);
     t_direction[1] = sin(best_yaw_) * cos(best_pitch_);
     t_direction[2] = -sin(best_pitch_);
-    updated_vel_ = target_vel_.length() * t_direction;
+    updated_vel = target_vel.length() * t_direction;
   } else {
+    updated_vel = target_vel;
     ROS_ERROR("No solution found for the given target velocity by the vfh3d+ local planner!");
   }
 
-  ROS_DEBUG("target_vel: %f, %f, %f", target_vel_.x(), target_vel_.y(), target_vel_.z());
-  ROS_DEBUG("updated_vel: %f, %f, %f",updated_vel_.x(), updated_vel_.y(), updated_vel_.z());
+  ROS_DEBUG("target_vel: %f, %f, %f", target_vel.x(), target_vel.y(), target_vel.z());
+  ROS_DEBUG("updated_vel: %f, %f, %f",updated_vel.x(), updated_vel.y(), updated_vel.z());
+  return updated_vel;
 }
 
 void PolarHistogram::update() {
@@ -273,7 +276,6 @@ void PolarHistogram::update() {
   #endif
   generateHistogram();
   binarizeHistogram();
-  windowSearch();
 }
 
 }
