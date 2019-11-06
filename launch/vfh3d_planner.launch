@@ -19,7 +19,7 @@
       --inorder" 
   />
 
-  <!-- Start the mavros navigation node -->
+  <!-- Start the vfh3d node -->
   <node name="vfh3d_node" pkg="vfh3d" type="vfh3d_node" output="screen" launch-prefix="$(arg launch_prefix)">
     <param name="octomap_topic" value="$(arg octomap_topic)" />
     <param name="hist_resolution" value="$(arg hist_resolution)" />
