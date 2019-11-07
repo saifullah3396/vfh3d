@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(vfh3d)
 
-option (BUILD_WITH_VISUALIZATION "Build with visualizations." OFF)
+option (BUILD_WITH_VISUALIZATION "Build with visualizations." ON)
 if (BUILD_WITH_VISUALIZATION)
   add_definitions(-DBUILD_WITH_VISUALIZATION)
 endif()
