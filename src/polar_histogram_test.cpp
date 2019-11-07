@@ -3,11 +3,13 @@
 #include <octomap/octomap.h>
 #include <octomap_msgs/conversions.h>
 #include <octomap_msgs/Octomap.h>
+#include <vfh3d/CorrectTarget.h>
 
 using namespace octomap;
 
 octomap::OcTree* oc_tree_;
-ros::Publisher octomap_pub_, pose_pub_, target_vel_pub_;
+ros::Publisher octomap_pub_, pose_pub_, target_vel_res_pub_, target_vel_pub_;
+ros::ServiceClient target_vel_client_;
 double resolution_ = 0.15;
 double tol_ = 0.001;
 
@@ -37,14 +39,15 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
     ros::NodeHandle p_nh("~");
     p_nh.getParam("resolution", resolution_);
-    std::string octomap_topic, pose_topic, target_vel_topic;
+    std::string octomap_topic, pose_topic;
     p_nh.getParam("octomap_topic", octomap_topic);
     p_nh.getParam("pose_topic", pose_topic);
-    p_nh.getParam("target_vel_topic", target_vel_topic);
     auto rate = ros::Rate(10);
     octomap_pub_ = nh.advertise<octomap_msgs::Octomap>(octomap_topic, 10);
     pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>(pose_topic, 10);
-    target_vel_pub_ = nh.advertise<geometry_msgs::TwistStamped>(target_vel_topic, 10);
+    target_vel_pub_ = nh.advertise<geometry_msgs::TwistStamped>("/vfh3d/target_vel", 10); 
+    target_vel_res_pub_ = nh.advertise<geometry_msgs::TwistStamped>("/vfh3d/corrected_vel", 10); 
+    target_vel_client_ = nh.serviceClient<vfh3d::CorrectTarget>("/vfh3d/correct_target");
     oc_tree_ = new octomap::OcTree(resolution_);
     auto max = 20;
     auto min = 5;
@@ -67,6 +70,8 @@ int main(int argc, char** argv)
     target_vel.twist.linear.x = 1.0;
     target_vel.twist.linear.y = 1.0;
     target_vel.header.frame_id = "map";
+    vfh3d::CorrectTarget correct_target;
+    correct_target.request.target_vel = target_vel;
     while(ros::ok()) {
       target_vel.header.stamp = ros::Time::now();
       octomap_msgs::Octomap pub_msg;
@@ -74,7 +79,11 @@ int main(int argc, char** argv)
       octomap_msgs::fullMapToMsg<octomap::OcTree>(*oc_tree_, pub_msg);
       octomap_pub_.publish(pub_msg);
       pose_pub_.publish(pose);
-      target_vel_pub_.publish(target_vel);
+      if (target_vel_client_.call(correct_target)) {
+        target_vel_pub_.publish(target_vel);
+        correct_target.response.corrected_vel.header.frame_id = "map";
+        target_vel_res_pub_.publish(correct_target.response.corrected_vel);
+      }
       ros::spinOnce();
       rate.sleep();
     }

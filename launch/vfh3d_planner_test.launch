@@ -23,7 +23,6 @@
     <param name="map_resolution" value="$(arg map_resolution)" />
     <param name="octomap_topic" value="$(arg octomap_topic)" />
     <param name="pose_topic" value="/mavros/local_position/pose" />
-    <param name="target_vel_topic" value="/vfh3d/target_vel" />
   </node>
 
   <!-- Start the mavros navigation node -->
@@ -34,7 +33,6 @@
     <param name="max_plan_range" value="$(arg max_plan_range)" />
     <param name="const_a" value="$(arg const_a)" />
     <param name="pose_topic" value="/mavros/local_position/pose" />
-    <param name="target_vel_topic" value="/vfh3d/target_vel" />
     <param name="vehicle_safety_radius" value="0.2" />
     <param name="turning_radius_l" value="0.2" />
     <param name="turning_radius_r" value="0.2" />

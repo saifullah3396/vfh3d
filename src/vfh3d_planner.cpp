@@ -6,11 +6,10 @@ namespace vfh3d {
 VFH3DPlanner::VFH3DPlanner() {
   // get params
   auto p_nh = ros::NodeHandle("~");
-  std::string octomap_topic, pose_topic, target_vel_topic;
+  std::string octomap_topic, pose_topic;
   double hist_resolution, max_plan_range, const_a;
   p_nh.getParam("octomap_topic", octomap_topic);
   p_nh.getParam("pose_topic", pose_topic);
-  p_nh.getParam("target_vel_topic", target_vel_topic);
   p_nh.getParam("map_resolution", map_resolution_);
   p_nh.getParam("max_plan_range", max_plan_range);
   p_nh.getParam("const_a", const_a);
