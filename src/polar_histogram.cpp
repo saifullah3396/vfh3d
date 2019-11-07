@@ -266,7 +266,7 @@ tf::Vector3 PolarHistogram::windowSearch(const tf::Vector3& target_vel)
   }
 
   ROS_DEBUG("target_vel: %f, %f, %f", target_vel.x(), target_vel.y(), target_vel.z());
-  ROS_DEBUG("updated_vel: %f, %f, %f",updated_vel.x(), updated_vel.y(), updated_vel.z());
+  ROS_DEBUG("updated_vel: %f, %f, %f", updated_vel.x(), updated_vel.y(), updated_vel.z());
   return updated_vel;
 }
 

@@ -1,5 +1,6 @@
 <launch>
   <arg name="debug" default="false" />
+  <arg name="output" default="log"/>
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
   <arg     if="$(arg debug)" name="launch_prefix"
 	   value="/usr/local/bin/gdb --directory=/usr/local/bin --ex run --args" />
@@ -20,7 +21,7 @@
   />
 
   <!-- Start the vfh3d node -->
-  <node name="vfh3d_node" pkg="vfh3d" type="vfh3d_node" output="screen" launch-prefix="$(arg launch_prefix)">
+  <node name="vfh3d_node" pkg="vfh3d" type="vfh3d_node" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
     <param name="octomap_topic" value="$(arg octomap_topic)" />
     <param name="hist_resolution" value="$(arg hist_resolution)" />
     <param name="map_resolution" value="$(arg map_resolution)" />
