@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <octomap/math/Vector3.h>
 #include <octomap/OcTree.h>
 #include <octomap_msgs/Octomap.h>
@@ -28,6 +29,7 @@ public:
 
   // callbacks
   void poseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg);
+  void cmdPoseCb(const geometry_msgs::PoseStampedConstPtr& pose_msg);
   void octomapCb(const octomap_msgs::OctomapConstPtr& octomap_msg);
 
   // services
@@ -36,17 +38,21 @@ public:
     vfh3d::CorrectTarget::Response& res);
 
 private:
+  void updateHistogram();
+
   // ros
   ros::NodeHandle nh_;
 
   // publishers
-  ros::Publisher histogram_pub_;
+  #ifdef BUILD_WITH_VISUALIZATION
   ros::Publisher bbx_cells_pub_;
   ros::Publisher hist_grid_pub_;
-  ros::Publisher cell_weights_pub_;
+  ros::Publisher updated_direction_pub_;
+  #endif
+  ros::Publisher cmd_pose_fixed_pub_;
 
   // subscribers
-  ros::Subscriber vehicle_pose_sub_, octomap_sub_;
+  ros::Subscriber vehicle_pose_sub_, pose_cmd_sub_, octomap_sub_;
   bool pose_recieved_ = {false};
   bool histogram_updated_ = {false};
 
@@ -57,6 +63,9 @@ private:
   double map_resolution_;
   
   // planning
+  geometry_msgs::PoseStamped cmd_pose_;
+  geometry_msgs::PoseStamped cmd_pose_fixed_;
+  ros::Time last_pose_stamp_;
   std::shared_ptr<OcTree> oc_tree_;
   std::shared_ptr<VehicleState> vehicle_state_;
   std::unique_ptr<PolarHistogram> polar_histogram_;
