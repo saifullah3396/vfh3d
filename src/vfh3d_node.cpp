@@ -6,10 +6,8 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "vfh3d_node");
     vfh3d::VFH3DPlanner planner;
-    auto rate = ros::Rate(10);
     while (ros::ok()) {
-        ros::spinOnce();
-        rate.sleep();
+        ros::spin();
     }
     return 0;
 }
