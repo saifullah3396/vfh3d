@@ -26,14 +26,12 @@ public:
   ~VehicleState() {}
 
   void poseCb(const geometry_msgs::PoseStampedConstPtr& pose) {
-    last_pose_ = pose_;
     tf::poseMsgToTF((*pose).pose, pose_);
     auto size_half = size_ * 0.5;
     min_ = pose_.getOrigin() - size_half;
     max_ = pose_.getOrigin() + size_half;
   }
 
-  tf::Pose getLastPose() const { return last_pose_; }
   tf::Pose getPose() const { return pose_; }
   double getTurningRadiusR() { return turning_radius_r_;}
   double getTurningRadiusL() { return turning_radius_l_;}
@@ -47,7 +45,6 @@ public:
 
 private:
   tf::Pose pose_; // vehicle pose
-  tf::Pose last_pose_; // last vehicle pose
   tf::Vector3 size_; // vehicle size in 3d
   tf::Vector3 min_ = {tf::Vector3(0.0, 0.0, 0.0)}; // vehicle minimum boundary in 3d
   tf::Vector3 max_ = {tf::Vector3(0.0, 0.0, 0.0)}; // vehicle maximum boundary in 3d
