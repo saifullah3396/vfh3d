@@ -114,6 +114,7 @@ void PolarHistogram::generateHistogram()
     cell_marker_.pose.position.x = coord.x();
     cell_marker_.pose.position.y = coord.y();
     cell_marker_.pose.position.z = coord.z();
+    cell_marker_.pose.orientation.w = 1.0;
     cell_marker_.id = marker_id_++;
     bbx_markers_.markers.push_back(cell_marker_);
     weights.push_back(voxel.getWeight());
@@ -262,7 +263,7 @@ tf::Vector3 PolarHistogram::windowSearch(const tf::Vector3& target_vel)
     updated_vel = target_vel.length() * t_direction;
   } else {
     updated_vel = target_vel;
-    ROS_ERROR("No solution found for the given target velocity by the vfh3d+ local planner!");
+    //ROS_ERROR("No solution found for the given target velocity by the vfh3d+ local planner!");
   }
 
   ROS_DEBUG("target_vel: %f, %f, %f", target_vel.x(), target_vel.y(), target_vel.z());
